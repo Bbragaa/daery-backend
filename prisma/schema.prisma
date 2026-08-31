@@ -1,0 +1,75 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  HEALTH_PROFESSIONAL
+  RESEARCHER
+}
+
+enum CaseStatus {
+  SUSPECTED
+  CONFIRMED
+  DISCARDED
+  DEATH
+}
+
+enum Sex {
+  M
+  F
+  OTHER
+  UNKNOWN
+}
+
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(HEALTH_PROFESSIONAL)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  reportedCases CaseNotification[]
+}
+
+model Region {
+  id       String  @id @default(uuid())
+  name     String
+  uf       String
+  ibgeCode String? @unique
+
+  cases CaseNotification[]
+}
+
+model Disease {
+  id          String  @id @default(uuid())
+  name        String
+  icdCode     String? @unique
+  description String?
+
+  cases CaseNotification[]
+}
+
+model CaseNotification {
+  id                String     @id @default(uuid())
+  diseaseId         String
+  disease           Disease    @relation(fields: [diseaseId], references: [id])
+  regionId          String
+  region            Region     @relation(fields: [regionId], references: [id])
+  reportedById      String
+  reportedBy        User       @relation(fields: [reportedById], references: [id])
+  patientAgeRange   String
+  patientSex        Sex
+  status            CaseStatus @default(SUSPECTED)
+  notificationDate  DateTime   @default(now())
+  symptomsOnsetDate DateTime?
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+}
