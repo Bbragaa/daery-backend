@@ -4,6 +4,7 @@ import swaggerUi from "swagger-ui-express";
 import { env } from "./config/env";
 import { swaggerSpec } from "./config/swagger";
 import { errorHandler } from "./middlewares/error-handler.middleware";
+import { caseNotificationRouter } from "./routes/case-notification.routes";
 import { userRouter } from "./routes/user.routes";
 
 const app = express();
@@ -16,6 +17,7 @@ app.get("/health", (_req, res) => {
 });
 
 app.use("/api/users", userRouter);
+app.use("/api/case-notifications", caseNotificationRouter);
 
 app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
