@@ -5,6 +5,7 @@ import { AppError } from "../utils/AppError";
 interface CreateCaseNotificationInput {
   diseaseId: string;
   regionId: string;
+  institutionId: string;
   reportedById: string;
   patientAgeRange: string;
   patientSex: Sex;
@@ -16,6 +17,7 @@ interface CreateCaseNotificationInput {
 interface UpdateCaseNotificationInput {
   diseaseId?: string;
   regionId?: string;
+  institutionId?: string;
   reportedById?: string;
   patientAgeRange?: string;
   patientSex?: Sex;
@@ -35,7 +37,7 @@ export async function createCaseNotification(
     return await prisma.caseNotification.create({ data: input });
   } catch (error) {
     if (isForeignKeyError(error)) {
-      throw new AppError("Referenced disease, region, or user does not exist", 400);
+      throw new AppError("Referenced disease, region, institution, or user does not exist", 400);
     }
     throw error;
   }
@@ -63,7 +65,7 @@ export async function updateCaseNotification(
     return await prisma.caseNotification.update({ where: { id }, data: input });
   } catch (error) {
     if (isForeignKeyError(error)) {
-      throw new AppError("Referenced disease, region, or user does not exist", 400);
+      throw new AppError("Referenced disease, region, institution, or user does not exist", 400);
     }
     throw error;
   }
