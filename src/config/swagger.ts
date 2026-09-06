@@ -59,6 +59,41 @@ const options: swaggerJsdoc.Options = {
           type: "string",
           enum: ["M", "F", "OTHER", "UNKNOWN"],
         },
+        InstitutionType: {
+          type: "string",
+          enum: ["HOSPITAL", "CLINIC", "LABORATORY", "UBS"],
+        },
+        HealthInstitution: {
+          type: "object",
+          properties: {
+            id: { type: "string", format: "uuid" },
+            name: { type: "string" },
+            cnesCode: { type: "string", nullable: true },
+            type: { $ref: "#/components/schemas/InstitutionType" },
+            regionId: { type: "string", format: "uuid" },
+            createdAt: { type: "string", format: "date-time" },
+            updatedAt: { type: "string", format: "date-time" },
+          },
+        },
+        CreateHealthInstitutionInput: {
+          type: "object",
+          required: ["name", "type", "regionId"],
+          properties: {
+            name: { type: "string" },
+            cnesCode: { type: "string" },
+            type: { $ref: "#/components/schemas/InstitutionType" },
+            regionId: { type: "string", format: "uuid" },
+          },
+        },
+        UpdateHealthInstitutionInput: {
+          type: "object",
+          properties: {
+            name: { type: "string" },
+            cnesCode: { type: "string" },
+            type: { $ref: "#/components/schemas/InstitutionType" },
+            regionId: { type: "string", format: "uuid" },
+          },
+        },
         CaseNotification: {
           type: "object",
           properties: {
