@@ -29,6 +29,7 @@ function baseCase(overrides: Partial<Record<string, unknown>> = {}) {
     id: "case-1",
     diseaseId: "disease-1",
     regionId: "region-1",
+    institutionId: "institution-1",
     reportedById: "user-1",
     patientAgeRange: "20-29",
     patientSex: "F",
@@ -52,6 +53,7 @@ describe("createCaseNotification", () => {
     const result = await caseNotificationService.createCaseNotification({
       diseaseId: "disease-1",
       regionId: "region-1",
+      institutionId: "institution-1",
       reportedById: "user-1",
       patientAgeRange: "20-29",
       patientSex: "F",
@@ -68,6 +70,22 @@ describe("createCaseNotification", () => {
       caseNotificationService.createCaseNotification({
         diseaseId: "missing",
         regionId: "region-1",
+        institutionId: "institution-1",
+        reportedById: "user-1",
+        patientAgeRange: "20-29",
+        patientSex: "F",
+      })
+    ).rejects.toMatchObject({ statusCode: 400 } as Partial<AppError>);
+  });
+
+  it("throws a 400 AppError when the referenced institution does not exist", async () => {
+    mockedPrisma.caseNotification.create.mockRejectedValue({ code: "P2003" });
+
+    await expect(
+      caseNotificationService.createCaseNotification({
+        diseaseId: "disease-1",
+        regionId: "region-1",
+        institutionId: "missing",
         reportedById: "user-1",
         patientAgeRange: "20-29",
         patientSex: "F",
@@ -82,6 +100,7 @@ describe("createCaseNotification", () => {
       caseNotificationService.createCaseNotification({
         diseaseId: "disease-1",
         regionId: "region-1",
+        institutionId: "institution-1",
         reportedById: "user-1",
         patientAgeRange: "20-29",
         patientSex: "F",

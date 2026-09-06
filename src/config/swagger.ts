@@ -59,12 +59,48 @@ const options: swaggerJsdoc.Options = {
           type: "string",
           enum: ["M", "F", "OTHER", "UNKNOWN"],
         },
+        InstitutionType: {
+          type: "string",
+          enum: ["HOSPITAL", "CLINIC", "LABORATORY", "UBS"],
+        },
+        HealthInstitution: {
+          type: "object",
+          properties: {
+            id: { type: "string", format: "uuid" },
+            name: { type: "string" },
+            cnesCode: { type: "string", nullable: true },
+            type: { $ref: "#/components/schemas/InstitutionType" },
+            regionId: { type: "string", format: "uuid" },
+            createdAt: { type: "string", format: "date-time" },
+            updatedAt: { type: "string", format: "date-time" },
+          },
+        },
+        CreateHealthInstitutionInput: {
+          type: "object",
+          required: ["name", "type", "regionId"],
+          properties: {
+            name: { type: "string" },
+            cnesCode: { type: "string" },
+            type: { $ref: "#/components/schemas/InstitutionType" },
+            regionId: { type: "string", format: "uuid" },
+          },
+        },
+        UpdateHealthInstitutionInput: {
+          type: "object",
+          properties: {
+            name: { type: "string" },
+            cnesCode: { type: "string" },
+            type: { $ref: "#/components/schemas/InstitutionType" },
+            regionId: { type: "string", format: "uuid" },
+          },
+        },
         CaseNotification: {
           type: "object",
           properties: {
             id: { type: "string", format: "uuid" },
             diseaseId: { type: "string", format: "uuid" },
             regionId: { type: "string", format: "uuid" },
+            institutionId: { type: "string", format: "uuid" },
             reportedById: { type: "string", format: "uuid" },
             patientAgeRange: { type: "string" },
             patientSex: { $ref: "#/components/schemas/Sex" },
@@ -77,10 +113,18 @@ const options: swaggerJsdoc.Options = {
         },
         CreateCaseNotificationInput: {
           type: "object",
-          required: ["diseaseId", "regionId", "reportedById", "patientAgeRange", "patientSex"],
+          required: [
+            "diseaseId",
+            "regionId",
+            "institutionId",
+            "reportedById",
+            "patientAgeRange",
+            "patientSex",
+          ],
           properties: {
             diseaseId: { type: "string", format: "uuid" },
             regionId: { type: "string", format: "uuid" },
+            institutionId: { type: "string", format: "uuid" },
             reportedById: { type: "string", format: "uuid" },
             patientAgeRange: { type: "string" },
             patientSex: { $ref: "#/components/schemas/Sex" },
@@ -94,6 +138,7 @@ const options: swaggerJsdoc.Options = {
           properties: {
             diseaseId: { type: "string", format: "uuid" },
             regionId: { type: "string", format: "uuid" },
+            institutionId: { type: "string", format: "uuid" },
             reportedById: { type: "string", format: "uuid" },
             patientAgeRange: { type: "string" },
             patientSex: { $ref: "#/components/schemas/Sex" },
