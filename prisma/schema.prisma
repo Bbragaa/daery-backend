@@ -27,6 +27,13 @@ enum Sex {
   UNKNOWN
 }
 
+enum InstitutionType {
+  HOSPITAL
+  CLINIC
+  LABORATORY
+  UBS
+}
+
 model User {
   id           String   @id @default(uuid())
   name         String
@@ -48,6 +55,20 @@ model Region {
   latitude  Float?
   longitude Float?
 
+  cases        CaseNotification[]
+  institutions HealthInstitution[]
+}
+
+model HealthInstitution {
+  id        String          @id @default(uuid())
+  name      String
+  cnesCode  String?         @unique
+  type      InstitutionType
+  regionId  String
+  region    Region          @relation(fields: [regionId], references: [id])
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
   cases CaseNotification[]
 }
 
@@ -61,18 +82,20 @@ model Disease {
 }
 
 model CaseNotification {
-  id                String     @id @default(uuid())
+  id                String            @id @default(uuid())
   diseaseId         String
-  disease           Disease    @relation(fields: [diseaseId], references: [id])
+  disease           Disease           @relation(fields: [diseaseId], references: [id])
   regionId          String
-  region            Region     @relation(fields: [regionId], references: [id])
+  region            Region            @relation(fields: [regionId], references: [id])
+  institutionId     String
+  institution       HealthInstitution @relation(fields: [institutionId], references: [id])
   reportedById      String
-  reportedBy        User       @relation(fields: [reportedById], references: [id])
+  reportedBy        User              @relation(fields: [reportedById], references: [id])
   patientAgeRange   String
   patientSex        Sex
-  status            CaseStatus @default(SUSPECTED)
-  notificationDate  DateTime   @default(now())
+  status            CaseStatus        @default(SUSPECTED)
+  notificationDate  DateTime          @default(now())
   symptomsOnsetDate DateTime?
-  createdAt         DateTime   @default(now())
-  updatedAt         DateTime   @updatedAt
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
 }
