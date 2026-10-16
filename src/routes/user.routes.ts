@@ -1,10 +1,18 @@
 import { Router } from "express";
 import * as userController from "../controllers/user.controller";
+import { authenticate, authorize } from "../middlewares/auth.middleware";
 import { validate } from "../middlewares/validate.middleware";
 import { asyncHandler } from "../utils/asyncHandler";
-import { createUserSchema, updateUserSchema } from "../validations/user.validation";
+import {
+  createUserSchema,
+  reviewVerificationSchema,
+  updateUserSchema,
+} from "../validations/user.validation";
 
 const router = Router();
+
+// Toda a gestão de usuários é exclusiva de ADMIN.
+router.use(authenticate, authorize("ADMIN"));
 
 /**
  * @openapi
@@ -32,7 +40,7 @@ const router = Router();
  *             schema:
  *               $ref: "#/components/schemas/Error"
  *       409:
- *         description: Email already in use
+ *         description: Email already in use, or an ADMIN tried to change their own role
  *         content:
  *           application/json:
  *             schema:
@@ -46,6 +54,12 @@ router.post("/", validate(createUserSchema), asyncHandler(userController.create)
  *   get:
  *     summary: List active users
  *     tags: [Users]
+ *     parameters:
+ *       - in: query
+ *         name: verificationStatus
+ *         schema:
+ *           $ref: "#/components/schemas/VerificationStatus"
+ *         description: Ex. PENDING lista os cadastros aguardando aprovação
  *     responses:
  *       200:
  *         description: List of active users
@@ -92,6 +106,10 @@ router.get("/:id", asyncHandler(userController.getById));
  * /api/users/{id}:
  *   patch:
  *     summary: Update a user
+ *     description: >
+ *       Changing `role` also sets the verification fields: HEALTH_PROFESSIONAL and INSTITUTION
+ *       become APPROVED (the ADMIN vouches for them); other roles get NOT_REQUIRED and no
+ *       requestedRole. An ADMIN cannot change their own role.
  *     tags: [Users]
  *     parameters:
  *       - in: path
@@ -126,7 +144,7 @@ router.get("/:id", asyncHandler(userController.getById));
  *             schema:
  *               $ref: "#/components/schemas/Error"
  *       409:
- *         description: Email already in use
+ *         description: Email already in use, or an ADMIN tried to change their own role
  *         content:
  *           application/json:
  *             schema:
@@ -150,6 +168,8 @@ router.patch("/:id", validate(updateUserSchema), asyncHandler(userController.upd
  *     responses:
  *       204:
  *         description: User deactivated
+ *       409:
+ *         description: An ADMIN cannot deactivate their own account
  *       404:
  *         description: User not found
  *         content:
@@ -158,5 +178,47 @@ router.patch("/:id", validate(updateUserSchema), asyncHandler(userController.upd
  *               $ref: "#/components/schemas/Error"
  */
 router.delete("/:id", asyncHandler(userController.deactivate));
+
+/**
+ * @openapi
+ * /api/users/{id}/verification:
+ *   patch:
+ *     summary: Approve or reject a pending professional/institution registration
+ *     tags: [Users]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [decision]
+ *             properties:
+ *               decision:
+ *                 type: string
+ *                 enum: [APPROVED, REJECTED]
+ *     responses:
+ *       200:
+ *         description: Decision applied
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/User"
+ *       404:
+ *         description: User not found
+ *       409:
+ *         description: User has no pending verification
+ */
+router.patch(
+  "/:id/verification",
+  validate(reviewVerificationSchema),
+  asyncHandler(userController.reviewVerification)
+);
 
 export { router as userRouter };
