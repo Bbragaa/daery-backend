@@ -11,6 +11,26 @@ enum Role {
   ADMIN
   HEALTH_PROFESSIONAL
   RESEARCHER
+  INSTITUTION
+  CITIZEN
+}
+
+// Status da verificação de contas que pedem um perfil com privilégios
+// (profissional de saúde ou instituição). Contas de cidadão não precisam
+// de verificação (NOT_REQUIRED).
+enum VerificationStatus {
+  NOT_REQUIRED
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// Nível de risco da doença (vem do modelo `doenca.nivel_risco` do pacote de banco da equipe).
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
 }
 
 enum CaseStatus {
@@ -28,34 +48,110 @@ enum Sex {
 }
 
 model User {
-  id           String   @id @default(uuid())
-  name         String
-  email        String   @unique
-  passwordHash String
-  role         Role     @default(HEALTH_PROFESSIONAL)
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id                 String             @id @default(uuid())
+  name               String
+  email              String             @unique
+  passwordHash       String
+  // Perfil efetivo, usado para autorização.
+  role               Role               @default(CITIZEN)
+  // Perfil pedido no cadastro; só vira `role` depois da aprovação de um ADMIN.
+  requestedRole      Role?
+  verificationStatus VerificationStatus @default(NOT_REQUIRED)
+  // Somente dígitos. Nunca é devolvido sem máscara pela API.
+  cpf                String?            @unique
+  // Consentimento do titular (LGPD, art. 8º, §2º): quando aceitou e qual versão do texto.
+  // Nulos em contas anteriores ao registro do aceite e em contas criadas por ADMIN.
+  // A migration adiciona CHECK: os dois campos são preenchidos juntos.
+  termsAcceptedAt    DateTime?
+  termsVersion       String?
+  isActive           Boolean            @default(true)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
 
-  reportedCases CaseNotification[]
+  reportedCases            CaseNotification[]
+  professionalRegistration ProfessionalRegistration?
+  institution              Institution?
+}
+
+model ProfessionalRegistration {
+  id                 String  @id @default(uuid())
+  userId             String  @unique
+  user               User    @relation(fields: [userId], references: [id])
+  // Sigla do conselho regional (ex.: CRM, COREN).
+  council            String
+  registrationNumber String
+  uf                 String
+  specialty          String?
+
+  @@unique([council, uf, registrationNumber])
+}
+
+model Institution {
+  id     String @id @default(uuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id])
+  // Somente dígitos.
+  cnpj   String @unique
+  name   String
 }
 
 model Region {
-  id       String  @id @default(uuid())
-  name     String
-  uf       String
-  ibgeCode String? @unique
+  id        String   @id @default(uuid())
+  name      String
+  uf        String
+  // Código IBGE do município (7 dígitos). Obrigatório para sincronizar com o InfoDengue.
+  ibgeCode  String?  @unique
+  // Coordenadas da sede municipal. A migration adiciona CHECK de faixa válida.
+  latitude  Decimal? @db.Decimal(9, 6)
+  longitude Decimal? @db.Decimal(9, 6)
 
-  cases CaseNotification[]
+  cases   CaseNotification[]
+  records EpidemiologicalRecord[]
+
+  @@unique([name, uf])
 }
 
 model Disease {
-  id          String  @id @default(uuid())
-  name        String
-  icdCode     String? @unique
-  description String?
+  id            String     @id @default(uuid())
+  name          String     @unique
+  icdCode       String?    @unique
+  description   String?
+  category      String?
+  riskLevel     RiskLevel?
+  // Valor do parâmetro `disease` da API do InfoDengue (dengue, chikungunya, zika).
+  // Nulo para doenças que o InfoDengue não cobre.
+  infoDengueKey String?    @unique
 
-  cases CaseNotification[]
+  cases   CaseNotification[]
+  records EpidemiologicalRecord[]
+}
+
+// Casos agregados por doença, município e data (equivalente a
+// `registro_epidemiologico` do pacote de banco da equipe). Recebe os dados
+// sincronizados do InfoDengue e eventuais dados de demonstração.
+model EpidemiologicalRecord {
+  id               String   @id @default(uuid())
+  diseaseId        String
+  disease          Disease  @relation(fields: [diseaseId], references: [id])
+  regionId         String
+  region           Region   @relation(fields: [regionId], references: [id])
+  // Para dados semanais, o primeiro dia (domingo) da semana epidemiológica.
+  recordDate       DateTime @db.Date
+  // Semana epidemiológica no formato AAAASS (ex.: 202641), quando houver.
+  epiWeek          Int?
+  caseCount        Int
+  estimatedCases   Float?
+  incidencePer100k Float?
+  // Nível de alerta do InfoDengue: 1 (verde) a 4 (vermelho).
+  alertLevel       Int?
+  source           String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@unique([diseaseId, regionId, recordDate, source])
+  @@index([diseaseId, recordDate])
+  @@index([regionId, recordDate])
+  @@index([recordDate])
 }
 
 model CaseNotification {
@@ -71,6 +167,11 @@ model CaseNotification {
   status            CaseStatus @default(SUSPECTED)
   notificationDate  DateTime   @default(now())
   symptomsOnsetDate DateTime?
+  // Exclusão lógica (decisão D7): o registro epidemiológico é preservado.
+  deletedAt         DateTime?
   createdAt         DateTime   @default(now())
   updatedAt         DateTime   @updatedAt
+
+  @@index([diseaseId, notificationDate])
+  @@index([regionId, notificationDate])
 }

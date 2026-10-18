@@ -2,12 +2,15 @@ import { Request, Response } from "express";
 import * as caseNotificationService from "../services/case-notification.service";
 
 export async function create(req: Request, res: Response) {
-  const caseNotification = await caseNotificationService.createCaseNotification(req.body);
+  const caseNotification = await caseNotificationService.createCaseNotification(
+    req.body,
+    req.user!.id
+  );
   res.status(201).json(caseNotification);
 }
 
 export async function getAll(_req: Request, res: Response) {
-  const caseNotifications = await caseNotificationService.getAllCaseNotifications();
+  const caseNotifications = await caseNotificationService.getAllCaseNotifications(res.locals.query);
   res.status(200).json(caseNotifications);
 }
 
@@ -19,7 +22,8 @@ export async function getById(req: Request, res: Response) {
 export async function update(req: Request, res: Response) {
   const caseNotification = await caseNotificationService.updateCaseNotification(
     req.params.id,
-    req.body
+    req.body,
+    req.user!
   );
   res.status(200).json(caseNotification);
 }
