@@ -1,0 +1,51 @@
+services:
+  - type: web
+    name: daery-backend
+    runtime: node
+    plan: free
+    buildCommand: npm install && npx prisma generate && npm run build
+    startCommand: npx prisma migrate deploy && node dist/database/seed.js && npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: daery-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 1d
+      # Trocar pela URL real do frontend (Vercel) depois do deploy do frontend.
+      - key: CORS_ORIGIN
+        value: "*"
+      - key: TRUST_PROXY
+        value: "1"
+      - key: BCRYPT_SALT_ROUNDS
+        value: "10"
+      - key: AUTH_RATE_LIMIT_MAX
+        value: "10"
+      - key: TERMS_VERSION
+        value: "2026-10-15"
+      - key: SEED_ADMIN_NAME
+        value: "Administrador Daery"
+      - key: SEED_ADMIN_EMAIL
+        value: "admin@daery.local"
+      - key: SEED_ADMIN_PASSWORD
+        value: "oHDBdoP201Wc"
+      - key: SEED_DEMO_DATA
+        value: "true"
+      - key: INFODENGUE_BASE_URL
+        value: "https://info.dengue.mat.br"
+      - key: INFODENGUE_TIMEOUT_MS
+        value: "15000"
+      - key: INFODENGUE_SYNC_WEEKS
+        value: "12"
+      - key: INFODENGUE_SYNC_INTERVAL_HOURS
+        value: "0"
+
+databases:
+  - name: daery-db
+    plan: free
+    databaseName: daery
+    user: daery
